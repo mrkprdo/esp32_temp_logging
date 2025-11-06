@@ -2,26 +2,32 @@
 
 Real-time temperature monitoring system with web dashboard and persistent data logging.
 
-![Dashboard](images/dashboard.jpg)
+<div align="center">
+<img src="images/dashboard.jpg" width="300">
+</div>
 
 ## Features
 
-- Real-time temperature monitoring using ESP32-S3 internal sensor
-- Web dashboard with live Chart.js visualization
-- WebSocket for live updates (2s interval)
-- Persistent storage in NVS flash (up to 1000 readings)
-- WS2812 RGB LED indicator (Red → Green → Blue)
-- REST API for data access
+| Feature                    | Description                                     |
+| -------------------------- | ----------------------------------------------- |
+| **Temperature Monitoring** | ESP32-S3 internal sensor, 5s sampling           |
+| **Web Dashboard**          | Live Chart.js visualization with stats          |
+| **WebSocket**              | Real-time updates every 2s                      |
+| **Storage**                | NVS flash, up to 1000 readings, circular buffer |
+| **LED Indicator**          | WS2812 RGB (Red → Green → Blue cycle)           |
+| **API**                    | REST endpoints for data access                  |
 
 ## Hardware
 
-- **MCU:** ESP32-S3-SUPERMINI
-- **LED:** WS2812 RGB (GPIO 48)
-- **Power:** USB-C PD with buck converter
+| Component | Spec                         |
+| --------- | ---------------------------- |
+| **MCU**   | ESP32-S3-SUPERMINI           |
+| **LED**   | WS2812 RGB (GPIO 48)         |
+| **Power** | USB-C PD with buck converter |
 
-![Schematic](images/schematics.JPG)
-![PCB](images/pcb.JPG)
-![Prototype](images/prototype.jpg)
+| Schematic                                     | PCB                                    | Prototype                                    |
+| --------------------------------------------- | -------------------------------------- | -------------------------------------------- |
+| <img src="images/schematics.JPG" width="200"> | <img src="images/pcb.JPG" width="200"> | <img src="images/prototype.jpg" width="200"> |
 
 ## Quick Start
 
@@ -62,34 +68,21 @@ http://<ESP32-IP>/
 
 Edit `main/main.c`:
 
-```c
-#define LED_GPIO 48                      // WS2812 GPIO pin
-#define MAX_TEMP_LOGS 1000               // Max stored readings
-#define TEMP_LOG_INTERVAL_MS 5000        // Sample every 5s
-#define WEBSOCKET_UPDATE_MS 2000         // WebSocket push every 2s
-```
+| Parameter                 | Default | Description                  |
+| ------------------------- | ------- | ---------------------------- |
+| `WIFI_SSID` / `WIFI_PASS` | -       | WiFi credentials             |
+| `LED_GPIO`                | 48      | WS2812 GPIO pin              |
+| `MAX_TEMP_LOGS`           | 1000    | Max stored readings          |
+| `TEMP_LOG_INTERVAL_MS`    | 5000    | Sample interval (ms)         |
+| `WEBSOCKET_UPDATE_MS`     | 2000    | WebSocket push interval (ms) |
 
 ## How It Works
 
-### Temperature Logging
-
-- Samples ESP32-S3 internal sensor every 5 seconds
-- Stores in circular buffer (1000 max)
-- Auto-saves to NVS flash every 10 readings
-- Data persists across power cycles
-
-### WS2812 LED Control
-
-- Custom RMT-based driver (no external libraries)
-- Precise timing using ESP32-S3 RMT peripheral
-- WS2812 protocol: T0H=0.4µs, T1H=0.8µs
-
-### Web Interface
-
-- Embedded HTML (no filesystem needed)
-- Real-time updates via WebSocket
-- Interactive Chart.js graph
-- Stats: current, avg, min, max temps
+| Component               | Implementation                                                                                  |
+| ----------------------- | ----------------------------------------------------------------------------------------------- |
+| **Temperature Logging** | ESP32-S3 internal sensor → Circular buffer (1000 max) → NVS flash (auto-save every 10 readings) |
+| **WS2812 LED**          | Custom RMT-based driver, precise timing (T0H=0.4µs, T1H=0.8µs), no external libraries           |
+| **Web Interface**       | Embedded HTML + Chart.js + WebSocket live updates (current/avg/min/max stats)                   |
 
 ## Project Structure
 
