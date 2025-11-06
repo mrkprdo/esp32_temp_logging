@@ -1,0 +1,24 @@
+# Build artifacts
+build/
+sdkconfig
+sdkconfig.old
+*.bin
+*.elf
+*.map
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Dependencies
+managed_components/
+dependencies.lock

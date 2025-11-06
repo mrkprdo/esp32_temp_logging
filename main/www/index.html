@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temperature Logger</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: #0d0d0d;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: #ffffff;
+            margin-bottom: 8px;
+            font-size: 28px;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            color: #666666;
+            margin-bottom: 40px;
+            font-size: 14px;
+            font-weight: 400;
+        }
+
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .stat-card {
+            background: #1a1a1a;
+            padding: 24px;
+            border: 1px solid #2a2a2a;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666666;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 500;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 600;
+            color: #ffffff;
+            letter-spacing: -1px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin-bottom: 24px;
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            padding: 20px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-start;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: #ffffff;
+            color: #0d0d0d;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: opacity 0.2s;
+        }
+
+        button:hover {
+            opacity: 0.8;
+        }
+
+        button:active {
+            opacity: 0.6;
+        }
+
+        button.danger {
+            background: #1a1a1a;
+            color: #ffffff;
+            border: 1px solid #2a2a2a;
+        }
+
+        .status {
+            margin-top: 24px;
+            padding: 12px 16px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .status.success {
+            background: #1a1a1a;
+            color: #4ade80;
+            border-left: 3px solid #4ade80;
+        }
+
+        .status.error {
+            background: #1a1a1a;
+            color: #f87171;
+            border-left: 3px solid #f87171;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌡️ Temperature Logger</h1>
+        <p class="subtitle">Real-time Temperature Monitoring System</p>
+        
+        <div class="stats-container">
+            <div class="stat-card">
+                <div class="stat-label">Current Temperature</div>
+                <div class="stat-value" id="currentTemp">--°C</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Average Temperature</div>
+                <div class="stat-value" id="avgTemp">--°C</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Min Temperature</div>
+                <div class="stat-value" id="minTemp">--°C</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Max Temperature</div>
+                <div class="stat-value" id="maxTemp">--°C</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Readings</div>
+                <div class="stat-value" id="totalReadings">0</div>
+            </div>
+        </div>
+        
+        <div class="chart-container">
+            <canvas id="tempChart"></canvas>
+        </div>
+        
+        <div class="controls">
+            <button onclick="refreshData()">🔄 Refresh Data</button>
+            <button onclick="clearLogs()" class="danger">🗑️ Clear Logs</button>
+        </div>
+        
+        <div id="status" class="status" style="display: none;"></div>
+    </div>
+
+    <script>
+        let chart;
+        let autoRefreshInterval;
+
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+            statusDiv.style.display = 'block';
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 3000);
+        }
+
+        function formatTimestamp(timestamp) {
+            const date = new Date(timestamp * 1000);
+            return date.toLocaleTimeString();
+        }
+
+        function updateStats(data) {
+            if (data.length === 0) {
+                document.getElementById('currentTemp').textContent = '--°C';
+                document.getElementById('avgTemp').textContent = '--°C';
+                document.getElementById('minTemp').textContent = '--°C';
+                document.getElementById('maxTemp').textContent = '--°C';
+                document.getElementById('totalReadings').textContent = '0';
+                return;
+            }
+
+            const temps = data.map(d => d.temperature);
+            const current = temps[temps.length - 1];
+            const avg = temps.reduce((a, b) => a + b, 0) / temps.length;
+            const min = Math.min(...temps);
+            const max = Math.max(...temps);
+
+            document.getElementById('currentTemp').textContent = current.toFixed(1) + '°C';
+            document.getElementById('avgTemp').textContent = avg.toFixed(1) + '°C';
+            document.getElementById('minTemp').textContent = min.toFixed(1) + '°C';
+            document.getElementById('maxTemp').textContent = max.toFixed(1) + '°C';
+            document.getElementById('totalReadings').textContent = data.length;
+        }
+
+        function createChart(data) {
+            const ctx = document.getElementById('tempChart').getContext('2d');
+            
+            if (chart) {
+                chart.destroy();
+            }
+
+            const labels = data.map(d => formatTimestamp(d.timestamp));
+            const temperatures = data.map(d => d.temperature);
+
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Temperature (°C)',
+                        data: temperatures,
+                        borderColor: '#ffffff',
+                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                        borderWidth: 2,
+                        tension: 0,
+                        fill: true,
+                        pointRadius: 0,
+                        pointHoverRadius: 4,
+                        pointHoverBackgroundColor: '#ffffff',
+                        pointHoverBorderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    animation: {
+                        duration: 0,
+                    },
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            backgroundColor: '#0d0d0d',
+                            titleColor: '#ffffff',
+                            bodyColor: '#ffffff',
+                            borderColor: '#2a2a2a',
+                            borderWidth: 1,
+                            padding: 12,
+                            cornerRadius: 0,
+                            displayColors: false,
+                            titleFont: {
+                                size: 12,
+                                weight: '500'
+                            },
+                            bodyFont: {
+                                size: 13,
+                                weight: '600'
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            grid: {
+                                color: '#2a2a2a',
+                                lineWidth: 1,
+                                drawBorder: false
+                            },
+                            ticks: {
+                                color: '#666666',
+                                font: {
+                                    size: 11,
+                                    weight: '500'
+                                },
+                                padding: 8,
+                                callback: function(value) {
+                                    return value + '°C';
+                                }
+                            },
+                            border: {
+                                display: false
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                color: '#666666',
+                                font: {
+                                    size: 11,
+                                    weight: '500'
+                                },
+                                padding: 8
+                            },
+                            border: {
+                                display: false
+                            }
+                        }
+                    },
+                    interaction: {
+                        mode: 'nearest',
+                        axis: 'x',
+                        intersect: false
+                    }
+                }
+            });
+        }
+
+        async function refreshData() {
+            try {
+                const response = await fetch('/api/temp');
+                if (!response.ok) {
+                    throw new Error('Failed to fetch data');
+                }
+                const data = await response.json();
+                
+                updateStats(data);
+                createChart(data);
+                
+                showStatus('Data refreshed successfully!', 'success');
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                showStatus('Error fetching data: ' + error.message, 'error');
+            }
+        }
+
+        async function clearLogs() {
+            if (!confirm('Are you sure you want to clear all temperature logs?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/clear');
+                if (!response.ok) {
+                    throw new Error('Failed to clear logs');
+                }
+                
+                showStatus('Logs cleared successfully!', 'success');
+                setTimeout(refreshData, 500);
+            } catch (error) {
+                console.error('Error clearing logs:', error);
+                showStatus('Error clearing logs: ' + error.message, 'error');
+            }
+        }
+
+        // Initialize
+        window.onload = function() {
+            refreshData();
+            // Auto-refresh every 30 seconds
+            autoRefreshInterval = setInterval(refreshData, 30000);
+        };
+    </script>
+</body>
+</html>
