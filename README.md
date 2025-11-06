@@ -1,6 +1,6 @@
-# ESP32-S3 Temperature Logger
+# Temperature Logger
 
-Real-time temperature monitoring system with web dashboard and persistent data logging.
+## Real-time temperature monitoring system built with ESP-IDF & FreeRTOS with web dashboard and persistent data logging.
 
 <div align="center">
 <img src="images/dashboard.jpg" width="300">
